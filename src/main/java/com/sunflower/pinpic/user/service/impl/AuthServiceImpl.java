@@ -69,8 +69,6 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
-                // Set default username as part of email if not provided
-                .username(request.getEmail().split("@")[0])
                 .build();
 
         userRepository.save(user);
