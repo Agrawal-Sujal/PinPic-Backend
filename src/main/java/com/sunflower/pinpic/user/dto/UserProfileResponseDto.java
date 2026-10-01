@@ -17,4 +17,6 @@ public class UserProfileResponseDto {
     private String mobileNumber;
     private String locale;
     private String pictureUrl;
+    private int followerCount;
+    private int followingCount;
 }

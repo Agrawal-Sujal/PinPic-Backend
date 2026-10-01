@@ -40,4 +40,8 @@ public class User {
     private String locale;
     
     private String pictureUrl;
+    
+    private int followerCount;
+    
+    private int followingCount;
 }
