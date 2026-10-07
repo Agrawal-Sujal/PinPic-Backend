@@ -1,5 +1,6 @@
 package com.sunflower.pinpic.user.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -41,7 +42,11 @@ public class User {
     
     private String pictureUrl;
     
-    private int followerCount;
+    @Column(columnDefinition = "integer default 0", nullable = false)
+    @Builder.Default
+    private int followerCount = 0;
     
-    private int followingCount;
+    @Column(columnDefinition = "integer default 0", nullable = false)
+    @Builder.Default
+    private int followingCount = 0;
 }
