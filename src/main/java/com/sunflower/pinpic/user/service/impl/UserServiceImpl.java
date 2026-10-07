@@ -2,6 +2,8 @@ package com.sunflower.pinpic.user.service.impl;
 
 import com.sunflower.pinpic.user.dto.UpdateProfileRequestDto;
 import com.sunflower.pinpic.user.dto.UserProfileResponseDto;
+import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
+import com.sunflower.pinpic.storage.S3Service;
 import com.sunflower.pinpic.user.entity.Follower;
 import com.sunflower.pinpic.user.entity.User;
 import com.sunflower.pinpic.user.repository.FollowerRepository;
@@ -11,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +22,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final FollowerRepository followerRepository;
+    private final S3Service s3Service;
 
     @Override
     public void setUsername(String email, String username) {
@@ -41,17 +45,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponseDto updateProfile(String email, UpdateProfileRequestDto requestDto) {
+    public void updateProfile(String email, UpdateProfileRequestDto requestDto) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        if (requestDto.getName() != null) user.setName(requestDto.getName());
-        if (requestDto.getMobileNumber() != null) user.setMobileNumber(requestDto.getMobileNumber());
-        if (requestDto.getLocale() != null) user.setLocale(requestDto.getLocale());
-        if (requestDto.getPictureUrl() != null) user.setPictureUrl(requestDto.getPictureUrl());
+        user.setName(requestDto.getName());
+        user.setMobileNumber(requestDto.getMobileNumber());
+        user.setLocale(requestDto.getLocale());
+        user.setPictureUrl(requestDto.getPictureUrl());
         
         userRepository.save(user);
-        return mapToDto(user);
+        mapToDto(user);
     }
 
     @Override
@@ -129,6 +133,30 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByIdIn(followingIds).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public InitiateUploadResponseDto initiateProfilePhotoUpload(String email, String extension) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        String s3Key = "profiles/" + user.getId() + "/" + UUID.randomUUID() + (extension != null ? "." + extension : "");
+        String presignedUrl = s3Service.getProfileUploadPresignedUrl(s3Key);
+        
+        return new InitiateUploadResponseDto(s3Key, presignedUrl);
+    }
+
+    @Override
+    public com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto confirmProfilePhotoUpload(String email, String s3Key) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        String publicUrl = s3Service.getPublicUrlForProfile(s3Key);
+        
+        user.setPictureUrl(publicUrl);
+        userRepository.save(user);
+        
+        return new com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto(publicUrl);
     }
 
     private UserProfileResponseDto mapToDto(User user) {

@@ -22,6 +22,9 @@ public class S3Service {
     @Value("${aws.s3.bucket}")
     private String bucketName;
 
+    @Value("${aws.s3.profile-bucket}")
+    private String profileBucketName;
+
     public String generatePresignedUrl(String objectKey, HttpMethod httpMethod, int expirationInMinutes) {
         // Set the presigned URL to expire after specified minutes
         Date expiration = new Date();
@@ -57,5 +60,28 @@ public class S3Service {
         metadataMap.put("lastModified", metadata.getLastModified());
         metadataMap.put("userMetadata", metadata.getUserMetadata());
         return metadataMap;
+    }
+
+    public String generatePresignedUrlForBucket(String bucket, String objectKey, HttpMethod httpMethod, int expirationInMinutes) {
+        Date expiration = new Date();
+        long expTimeMillis = expiration.getTime();
+        expTimeMillis += 1000L * 60 * expirationInMinutes;
+        expiration.setTime(expTimeMillis);
+
+        GeneratePresignedUrlRequest generatePresignedUrlRequest =
+                new GeneratePresignedUrlRequest(bucket, objectKey)
+                        .withMethod(httpMethod)
+                        .withExpiration(expiration);
+
+        URL url = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
+        return url.toString();
+    }
+
+    public String getProfileUploadPresignedUrl(String objectKey) {
+        return generatePresignedUrlForBucket(profileBucketName, objectKey, HttpMethod.PUT, 15);
+    }
+
+    public String getPublicUrlForProfile(String objectKey) {
+        return s3Client.getUrl(profileBucketName, objectKey).toString();
     }
 }

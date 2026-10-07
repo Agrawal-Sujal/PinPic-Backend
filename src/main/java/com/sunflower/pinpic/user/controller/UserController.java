@@ -7,14 +7,7 @@ import com.sunflower.pinpic.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -38,9 +31,10 @@ public class UserController {
         return ResponseEntity.ok(userService.getProfile(principal.getName()));
     }
 
-    @PatchMapping("/profile")
-    public ResponseEntity<UserProfileResponseDto> updateProfile(@Valid @RequestBody UpdateProfileRequestDto request, Principal principal) {
-        return ResponseEntity.ok(userService.updateProfile(principal.getName(), request));
+    @PostMapping("/profile")
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileRequestDto request, Principal principal) {
+        userService.updateProfile(principal.getName(), request);
+        return ResponseEntity.ok(java.util.Collections.emptyMap());
     }
 
     @PostMapping("/follow/{followingId}")
