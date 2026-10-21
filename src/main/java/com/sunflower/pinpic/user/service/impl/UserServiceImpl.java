@@ -1,5 +1,6 @@
 package com.sunflower.pinpic.user.service.impl;
 
+import com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto;
 import com.sunflower.pinpic.user.dto.UpdateProfileRequestDto;
 import com.sunflower.pinpic.user.dto.UserProfileResponseDto;
 import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
@@ -153,10 +154,7 @@ public class UserServiceImpl implements UserService {
         
         String publicUrl = s3Service.getPublicUrlForProfile(s3Key);
         
-        user.setPictureUrl(publicUrl);
-        userRepository.save(user);
-        
-        return new com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto(publicUrl);
+        return new ProfilePhotoConfirmResponseDto(publicUrl);
     }
 
     private UserProfileResponseDto mapToDto(User user) {

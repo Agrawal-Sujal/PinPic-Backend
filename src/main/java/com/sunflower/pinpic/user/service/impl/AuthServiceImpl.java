@@ -55,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         String token = jwtTokenProvider.generateToken(user.getEmail());
-        return new AuthResponseDto(token, user.getUsername());
+        return new AuthResponseDto(token, user.getUsername(),user.getId(),user.getPictureUrl(),user.getEmail());
     }
 
     @Override
@@ -95,7 +95,7 @@ public class AuthServiceImpl implements AuthService {
                 });
 
                 String token = jwtTokenProvider.generateToken(user.getEmail());
-                return new AuthResponseDto(token, user.getUsername());
+                return new AuthResponseDto(token, user.getUsername(),user.getId(),user.getPictureUrl(),user.getEmail());
             } else {
                 throw new IllegalArgumentException("Invalid ID token");
             }
