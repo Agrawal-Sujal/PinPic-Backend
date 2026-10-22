@@ -28,6 +28,8 @@ public class Photo {
 
     private String userId;
 
+    private String clusterId;
+
     private String name;
 
     private String s3Key;

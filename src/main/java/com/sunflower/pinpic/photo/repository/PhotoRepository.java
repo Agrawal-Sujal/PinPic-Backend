@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface PhotoRepository extends JpaRepository<Photo, String> {
     Optional<Photo> findByS3Key(String s3Key);
+    java.util.List<Photo> findByUserId(String userId);
+    java.util.List<Photo> findByClusterId(String clusterId);
 }

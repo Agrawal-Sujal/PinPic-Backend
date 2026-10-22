@@ -1,6 +1,7 @@
 package com.sunflower.pinpic.photo.controller;
 
 import com.sunflower.pinpic.photo.dto.ConfirmUploadRequestDto;
+import com.sunflower.pinpic.photo.dto.DeletePhotosRequestDto;
 import com.sunflower.pinpic.photo.dto.InitiateUploadRequestDto;
 import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
 import com.sunflower.pinpic.photo.entity.Photo;
@@ -42,5 +43,23 @@ public class PhotoController {
     public ResponseEntity<Photo> confirmUpload(@RequestBody ConfirmUploadRequestDto request) {
         Photo updatedPhoto = photoService.confirmUpload(request);
         return ResponseEntity.ok(updatedPhoto);
+    }
+
+    @DeleteMapping("/{photoId}")
+    public ResponseEntity<Void> deletePhoto(@PathVariable String photoId, Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        photoService.deletePhoto(photoId, principal.getName());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/delete-batch")
+    public ResponseEntity<Void> deletePhotosBatch(@RequestBody DeletePhotosRequestDto request, Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        photoService.deletePhotos(request.getPhotoIds(), principal.getName());
+        return ResponseEntity.ok().build();
     }
 }
