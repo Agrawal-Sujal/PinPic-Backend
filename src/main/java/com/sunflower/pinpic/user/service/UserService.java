@@ -1,8 +1,9 @@
 package com.sunflower.pinpic.user.service;
 
+import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
 import com.sunflower.pinpic.user.dto.UpdateProfileRequestDto;
 import com.sunflower.pinpic.user.dto.UserProfileResponseDto;
-import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
+
 import java.util.List;
 
 public interface UserService {
@@ -17,6 +18,8 @@ public interface UserService {
     List<UserProfileResponseDto> searchUsers(String email, String query);
     UserProfileResponseDto getUserProfileById(String email, String userId);
     List<com.sunflower.pinpic.photo.dto.UserPhotoResponseDto> getUserPhotos(String email, String userId);
+
+    List<com.sunflower.pinpic.photo.dto.UserClusterResponseDto> getUserClusters(String email, String userId);
     
     InitiateUploadResponseDto initiateProfilePhotoUpload(String email, String extension);
     com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto confirmProfilePhotoUpload(String email, String s3Key);

@@ -36,6 +36,14 @@ public class ClusterService {
                 cluster.setLocation(dto.getLocation());
                 cluster.setThumbnailPhotoId(dto.getThumbnailPhotoId());
                 cluster.setPhotoCount(dto.getPhotoCount() != null ? dto.getPhotoCount() : cluster.getPhotoCount());
+                if (dto.getPublicPhotoCount() != null) cluster.setPublicPhotoCount(dto.getPublicPhotoCount());
+                if (dto.getPrivatePhotoCount() != null) cluster.setPrivatePhotoCount(dto.getPrivatePhotoCount());
+                if (dto.getFriendPhotoCount() != null) cluster.setFriendPhotoCount(dto.getFriendPhotoCount());
+                if (dto.getVisibility() != null) {
+                    cluster.setVisibility(dto.getVisibility());
+                } else {
+                    cluster.updateVisibility();
+                }
                 cluster.setUpdatedAt(now);
                 return mapToDto(clusterRepository.save(cluster));
             }
@@ -51,9 +59,17 @@ public class ClusterService {
                 .location(dto.getLocation())
                 .thumbnailPhotoId(dto.getThumbnailPhotoId())
                 .photoCount(dto.getPhotoCount() != null ? dto.getPhotoCount() : 0)
+                .publicPhotoCount(dto.getPublicPhotoCount() != null ? dto.getPublicPhotoCount() : 0)
+                .privatePhotoCount(dto.getPrivatePhotoCount() != null ? dto.getPrivatePhotoCount() : 0)
+                .friendPhotoCount(dto.getFriendPhotoCount() != null ? dto.getFriendPhotoCount() : 0)
+                .visibility(dto.getVisibility())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
+
+        if (cluster.getVisibility() == null) {
+            cluster.updateVisibility();
+        }
 
         return mapToDto(clusterRepository.save(cluster));
     }
@@ -89,6 +105,10 @@ public class ClusterService {
                 .location(cluster.getLocation())
                 .thumbnailPhotoId(cluster.getThumbnailPhotoId())
                 .photoCount(cluster.getPhotoCount())
+                .visibility(cluster.getVisibility())
+                .publicPhotoCount(cluster.getPublicPhotoCount())
+                .privatePhotoCount(cluster.getPrivatePhotoCount())
+                .friendPhotoCount(cluster.getFriendPhotoCount())
                 .createdAt(cluster.getCreatedAt())
                 .updatedAt(cluster.getUpdatedAt())
                 .build();

@@ -71,4 +71,12 @@ public class PhotoController {
         }
         return ResponseEntity.ok(userService.getUserPhotos(principal.getName(), userId));
     }
+
+    @GetMapping("/user/{userId}/clusters")
+    public ResponseEntity<java.util.List<com.sunflower.pinpic.photo.dto.UserClusterResponseDto>> getUserClusters(@PathVariable String userId, Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userService.getUserClusters(principal.getName(), userId));
+    }
 }

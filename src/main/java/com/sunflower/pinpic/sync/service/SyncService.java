@@ -2,7 +2,6 @@ package com.sunflower.pinpic.sync.service;
 
 import com.sunflower.pinpic.device.repository.DeviceRepository;
 import com.sunflower.pinpic.photo.entity.Cluster;
-import com.sunflower.pinpic.photo.entity.Location;
 import com.sunflower.pinpic.photo.entity.Photo;
 import com.sunflower.pinpic.photo.entity.Visibility;
 import com.sunflower.pinpic.photo.repository.ClusterRepository;
@@ -203,6 +202,10 @@ public class SyncService {
                         .location(cluster.getLocation())
                         .thumbnailPhotoGlobalId(cluster.getThumbnailPhotoId())
                         .photoCount(cluster.getPhotoCount())
+                        .visibility(cluster.getVisibility())
+                        .publicPhotoCount(cluster.getPublicPhotoCount())
+                        .privatePhotoCount(cluster.getPrivatePhotoCount())
+                        .friendPhotoCount(cluster.getFriendPhotoCount())
                         .build();
 
                 itemBuilder.cluster(clusterDto);
@@ -239,6 +242,14 @@ public class SyncService {
                 if (data.getLocation() != null) cluster.setLocation(data.getLocation());
                 if (data.getThumbnailPhotoGlobalId() != null) cluster.setThumbnailPhotoId(data.getThumbnailPhotoGlobalId());
                 if (data.getPhotoCount() != null) cluster.setPhotoCount(data.getPhotoCount());
+                if (data.getPublicPhotoCount() != null) cluster.setPublicPhotoCount(data.getPublicPhotoCount());
+                if (data.getPrivatePhotoCount() != null) cluster.setPrivatePhotoCount(data.getPrivatePhotoCount());
+                if (data.getFriendPhotoCount() != null) cluster.setFriendPhotoCount(data.getFriendPhotoCount());
+                if (data.getVisibility() != null) {
+                    cluster.setVisibility(data.getVisibility());
+                } else {
+                    cluster.updateVisibility();
+                }
                 cluster.setUpdatedAt(now);
                 cluster = clusterRepository.save(cluster);
                 return cluster.getClusterId();
@@ -250,9 +261,16 @@ public class SyncService {
                         .location(data != null ? data.getLocation() : null)
                         .thumbnailPhotoId(data != null ? data.getThumbnailPhotoGlobalId() : null)
                         .photoCount(data != null && data.getPhotoCount() != null ? data.getPhotoCount() : 0)
+                        .publicPhotoCount(data != null && data.getPublicPhotoCount() != null ? data.getPublicPhotoCount() : 0)
+                        .privatePhotoCount(data != null && data.getPrivatePhotoCount() != null ? data.getPrivatePhotoCount() : 0)
+                        .friendPhotoCount(data != null && data.getFriendPhotoCount() != null ? data.getFriendPhotoCount() : 0)
+                        .visibility(data != null ? data.getVisibility() : null)
                         .createdAt(now)
                         .updatedAt(now)
                         .build();
+                if (cluster.getVisibility() == null) {
+                    cluster.updateVisibility();
+                }
                 cluster = clusterRepository.save(cluster);
                 return cluster.getClusterId();
             }
