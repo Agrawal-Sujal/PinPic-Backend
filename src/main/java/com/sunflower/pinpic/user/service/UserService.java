@@ -14,6 +14,9 @@ public interface UserService {
     void unfollow(String email, String followingId);
     List<UserProfileResponseDto> getFollowers(String userId);
     List<UserProfileResponseDto> getFollowings(String userId);
+    List<UserProfileResponseDto> searchUsers(String email, String query);
+    UserProfileResponseDto getUserProfileById(String email, String userId);
+    List<com.sunflower.pinpic.photo.dto.UserPhotoResponseDto> getUserPhotos(String email, String userId);
     
     InitiateUploadResponseDto initiateProfilePhotoUpload(String email, String extension);
     com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto confirmProfilePhotoUpload(String email, String s3Key);

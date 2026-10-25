@@ -1,5 +1,6 @@
 package com.sunflower.pinpic.user.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,4 +20,6 @@ public class UserProfileResponseDto {
     private String pictureUrl;
     private int followerCount;
     private int followingCount;
+    @JsonProperty("isFollowing")
+    private Boolean isFollowing;
 }

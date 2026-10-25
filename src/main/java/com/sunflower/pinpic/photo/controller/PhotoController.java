@@ -22,6 +22,7 @@ public class PhotoController {
 
     private final PhotoService photoService;
     private final UserRepository userRepository;
+    private final com.sunflower.pinpic.user.service.UserService userService;
 
     @PostMapping("/initiate-upload")
     public ResponseEntity<?> initiateUpload(@RequestBody InitiateUploadRequestDto request, Principal principal) {
@@ -61,5 +62,13 @@ public class PhotoController {
         }
         photoService.deletePhotos(request.getPhotoIds(), principal.getName());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<java.util.List<com.sunflower.pinpic.photo.dto.UserPhotoResponseDto>> getUserPhotos(@PathVariable String userId, Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userService.getUserPhotos(principal.getName(), userId));
     }
 }
