@@ -4,6 +4,10 @@ import com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto;
 import com.sunflower.pinpic.user.dto.UpdateProfileRequestDto;
 import com.sunflower.pinpic.user.dto.UserProfileResponseDto;
 import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
+import com.sunflower.pinpic.photo.dto.UserPhotoResponseDto;
+import com.sunflower.pinpic.photo.entity.Photo;
+import com.sunflower.pinpic.photo.entity.Visibility;
+import com.sunflower.pinpic.photo.repository.PhotoRepository;
 import com.sunflower.pinpic.storage.S3Service;
 import com.sunflower.pinpic.user.entity.Follower;
 import com.sunflower.pinpic.user.entity.User;
@@ -13,6 +17,8 @@ import com.sunflower.pinpic.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,6 +30,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final FollowerRepository followerRepository;
     private final S3Service s3Service;
+    private final PhotoRepository photoRepository;
 
     @Override
     public void setUsername(String email, String username) {
@@ -105,8 +112,8 @@ public class UserServiceImpl implements UserService {
                 
         followerRepository.delete(follow);
         
-        followerUser.setFollowingCount(followerUser.getFollowingCount() - 1);
-        followingUser.setFollowerCount(followingUser.getFollowerCount() - 1);
+        followerUser.setFollowingCount(Math.max(0, followerUser.getFollowingCount() - 1));
+        followingUser.setFollowerCount(Math.max(0, followingUser.getFollowerCount() - 1));
         
         userRepository.save(followerUser);
         userRepository.save(followingUser);
@@ -134,6 +141,96 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByIdIn(followingIds).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UserProfileResponseDto> searchUsers(String email, String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        User currentUser = (email != null) ? userRepository.findByEmail(email).orElse(null) : null;
+        String currentUserId = (currentUser != null) ? currentUser.getId() : "";
+
+        List<User> users = userRepository.searchUsers(query.trim(), currentUserId);
+
+        return users.stream().map(user -> {
+            UserProfileResponseDto dto = mapToDto(user);
+            if (currentUser != null) {
+                dto.setIsFollowing(followerRepository.existsByFollowerIdAndFollowingId(currentUser.getId(), user.getId()));
+            } else {
+                dto.setIsFollowing(false);
+            }
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public UserProfileResponseDto getUserProfileById(String email, String userId) {
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserProfileResponseDto dto = mapToDto(targetUser);
+        if (email != null) {
+            User currentUser = userRepository.findByEmail(email).orElse(null);
+            if (currentUser != null) {
+                dto.setIsFollowing(followerRepository.existsByFollowerIdAndFollowingId(currentUser.getId(), targetUser.getId()));
+            }
+        }
+        return dto;
+    }
+
+    @Override
+    public List<UserPhotoResponseDto> getUserPhotos(String email, String userId) {
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Target user not found"));
+
+        List<Visibility> allowedVisibilities = new ArrayList<>();
+        allowedVisibilities.add(Visibility.PUBLIC);
+
+        if (currentUser.getId().equals(userId)) {
+            allowedVisibilities.add(Visibility.FRIENDS);
+            allowedVisibilities.add(Visibility.PRIVATE);
+        } else {
+            boolean isFollowing = followerRepository.existsByFollowerIdAndFollowingId(currentUser.getId(), userId);
+            boolean isFollower = followerRepository.existsByFollowerIdAndFollowingId(userId, currentUser.getId());
+            boolean areFriends = isFollowing || isFollower;
+
+            if (areFriends) {
+                allowedVisibilities.add(Visibility.FRIENDS);
+            }
+        }
+
+        List<Photo> photos = photoRepository.findVisiblePhotosForUser(userId, allowedVisibilities);
+
+        // Sort descending by takenAt, then uploadedAt
+        photos.sort((p1, p2) -> {
+            LocalDateTime t1 = p1.getTakenAt() != null ? p1.getTakenAt() : p1.getUploadedAt();
+            LocalDateTime t2 = p2.getTakenAt() != null ? p2.getTakenAt() : p2.getUploadedAt();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t2.compareTo(t1);
+        });
+
+        return photos.stream().map(photo -> {
+            String downloadUrl = null;
+            if (photo.getS3Key() != null && !photo.getS3Key().isBlank()) {
+                try {
+                    downloadUrl = s3Service.getDownloadPresignedUrl(photo.getS3Key());
+                } catch (Exception ignored) {
+                }
+            }
+            return UserPhotoResponseDto.builder()
+                    .photoId(photo.getPhotoId())
+                    .userId(photo.getUserId())
+                    .name(photo.getName())
+                    .downloadUrl(downloadUrl)
+                    .visibility(photo.getVisibility() != null ? photo.getVisibility().name() : null)
+                    .takenAt(photo.getTakenAt() != null ? photo.getTakenAt().toString() : null)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Override
