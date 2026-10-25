@@ -9,9 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -61,6 +60,14 @@ public class UserController {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
         }
         return ResponseEntity.ok(userService.getUserPhotos(principal.getName(), userId));
+    }
+
+    @GetMapping("/{userId}/clusters")
+    public ResponseEntity<List<com.sunflower.pinpic.photo.dto.UserClusterResponseDto>> getUserClusters(@PathVariable String userId, Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(userService.getUserClusters(principal.getName(), userId));
     }
 
     @PostMapping("/follow/{followingId}")

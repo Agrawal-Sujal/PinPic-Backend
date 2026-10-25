@@ -1,9 +1,6 @@
 package com.sunflower.pinpic.photo.entity;
 
-import jakarta.persistence.Embedded;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,7 +31,42 @@ public class Cluster {
     @Builder.Default
     private Integer photoCount = 0;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Visibility visibility = Visibility.PRIVATE;
+
+    @Builder.Default
+    private Integer publicPhotoCount = 0;
+
+    @Builder.Default
+    private Integer privatePhotoCount = 0;
+
+    @Builder.Default
+    private Integer friendPhotoCount = 0;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    public Visibility calculateVisibility() {
+        if (publicPhotoCount != null && publicPhotoCount > 0) {
+            return Visibility.PUBLIC;
+        } else if (friendPhotoCount != null && friendPhotoCount > 0) {
+            return Visibility.FRIENDS;
+        } else {
+            return Visibility.PRIVATE;
+        }
+    }
+
+    public void updateVisibility() {
+        this.visibility = calculateVisibility();
+    }
+
+    public Integer getFriendsPhotoCount() {
+        return friendPhotoCount;
+    }
+
+    public void setFriendsPhotoCount(Integer count) {
+        this.friendPhotoCount = count;
+    }
 }

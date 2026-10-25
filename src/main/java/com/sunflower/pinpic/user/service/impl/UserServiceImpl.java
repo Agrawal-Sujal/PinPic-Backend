@@ -1,14 +1,17 @@
 package com.sunflower.pinpic.user.service.impl;
 
+import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
+import com.sunflower.pinpic.photo.dto.UserClusterResponseDto;
+import com.sunflower.pinpic.photo.dto.UserPhotoResponseDto;
+import com.sunflower.pinpic.photo.entity.Cluster;
+import com.sunflower.pinpic.photo.entity.Photo;
+import com.sunflower.pinpic.photo.entity.Visibility;
+import com.sunflower.pinpic.photo.repository.ClusterRepository;
+import com.sunflower.pinpic.photo.repository.PhotoRepository;
+import com.sunflower.pinpic.storage.S3Service;
 import com.sunflower.pinpic.user.dto.ProfilePhotoConfirmResponseDto;
 import com.sunflower.pinpic.user.dto.UpdateProfileRequestDto;
 import com.sunflower.pinpic.user.dto.UserProfileResponseDto;
-import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
-import com.sunflower.pinpic.photo.dto.UserPhotoResponseDto;
-import com.sunflower.pinpic.photo.entity.Photo;
-import com.sunflower.pinpic.photo.entity.Visibility;
-import com.sunflower.pinpic.photo.repository.PhotoRepository;
-import com.sunflower.pinpic.storage.S3Service;
 import com.sunflower.pinpic.user.entity.Follower;
 import com.sunflower.pinpic.user.entity.User;
 import com.sunflower.pinpic.user.repository.FollowerRepository;
@@ -18,9 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +32,7 @@ public class UserServiceImpl implements UserService {
     private final FollowerRepository followerRepository;
     private final S3Service s3Service;
     private final PhotoRepository photoRepository;
+    private final ClusterRepository clusterRepository;
 
     @Override
     public void setUsername(String email, String username) {
@@ -231,6 +233,135 @@ public class UserServiceImpl implements UserService {
                     .takenAt(photo.getTakenAt() != null ? photo.getTakenAt().toString() : null)
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UserClusterResponseDto> getUserClusters(String email, String userId) {
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Target user not found"));
+
+        List<Visibility> allowedVisibilities = new ArrayList<>();
+        allowedVisibilities.add(Visibility.PUBLIC);
+
+        if (currentUser.getId().equals(userId)) {
+            allowedVisibilities.add(Visibility.FRIENDS);
+            allowedVisibilities.add(Visibility.PRIVATE);
+        } else {
+            boolean isFollowing = followerRepository.existsByFollowerIdAndFollowingId(currentUser.getId(), userId);
+            boolean isFollower = followerRepository.existsByFollowerIdAndFollowingId(userId, currentUser.getId());
+            if (isFollowing || isFollower) {
+                allowedVisibilities.add(Visibility.FRIENDS);
+            }
+        }
+
+        List<Cluster> clusters = clusterRepository.findVisibleClustersForUser(userId, allowedVisibilities);
+        List<UserClusterResponseDto> result = new ArrayList<>();
+        Set<String> processedClusterIds = new HashSet<>();
+
+        for (Cluster cluster : clusters) {
+            processedClusterIds.add(cluster.getClusterId());
+
+            List<Photo> clusterPhotos = photoRepository.findByClusterId(cluster.getClusterId());
+            List<Photo> visiblePhotos = clusterPhotos.stream()
+                    .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
+                    .filter(p -> p.getVisibility() != null && allowedVisibilities.contains(p.getVisibility()))
+                    .sorted((p1, p2) -> {
+                        LocalDateTime t1 = p1.getTakenAt() != null ? p1.getTakenAt() : p1.getUploadedAt();
+                        LocalDateTime t2 = p2.getTakenAt() != null ? p2.getTakenAt() : p2.getUploadedAt();
+                        if (t1 == null && t2 == null) return 0;
+                        if (t1 == null) return 1;
+                        if (t2 == null) return -1;
+                        return t2.compareTo(t1);
+                    })
+                    .collect(Collectors.toList());
+
+            if (visiblePhotos.isEmpty()) {
+                continue;
+            }
+
+            List<UserPhotoResponseDto> photoDtos = visiblePhotos.stream().map(photo -> {
+                String downloadUrl = null;
+                if (photo.getS3Key() != null && !photo.getS3Key().isBlank()) {
+                    try {
+                        downloadUrl = s3Service.getDownloadPresignedUrl(photo.getS3Key());
+                    } catch (Exception ignored) {
+                    }
+                }
+                return UserPhotoResponseDto.builder()
+                        .photoId(photo.getPhotoId())
+                        .userId(photo.getUserId())
+                        .name(photo.getName())
+                        .downloadUrl(downloadUrl)
+                        .visibility(photo.getVisibility() != null ? photo.getVisibility().name() : null)
+                        .takenAt(photo.getTakenAt() != null ? photo.getTakenAt().toString() : null)
+                        .build();
+            }).collect(Collectors.toList());
+
+            String thumbnailUrl = null;
+            if (cluster.getThumbnailPhotoId() != null) {
+                Photo thumb = photoRepository.findById(cluster.getThumbnailPhotoId()).orElse(null);
+                if (thumb != null && thumb.getS3Key() != null) {
+                    try {
+                        thumbnailUrl = s3Service.getDownloadPresignedUrl(thumb.getS3Key());
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+            if (thumbnailUrl == null && !photoDtos.isEmpty()) {
+                thumbnailUrl = photoDtos.get(0).getDownloadUrl();
+            }
+
+            result.add(UserClusterResponseDto.builder()
+                    .clusterId(cluster.getClusterId())
+                    .userId(cluster.getUserId())
+                    .location(cluster.getLocation())
+                    .thumbnailPhotoId(cluster.getThumbnailPhotoId())
+                    .thumbnailUrl(thumbnailUrl)
+                    .photoCount(photoDtos.size())
+                    .visibility(cluster.getVisibility() != null ? cluster.getVisibility() : cluster.calculateVisibility())
+                    .photos(photoDtos)
+                    .build());
+        }
+
+        // Include any geo-tagged photos not in a named cluster
+        List<Photo> allVisibleUserPhotos = photoRepository.findVisiblePhotosForUser(userId, allowedVisibilities);
+        for (Photo p : allVisibleUserPhotos) {
+            if (p.getLocation() != null && p.getLocation().getLatitude() != null && p.getLocation().getLongitude() != null) {
+                if (p.getClusterId() == null || p.getClusterId().isBlank() || !processedClusterIds.contains(p.getClusterId())) {
+                    String downloadUrl = null;
+                    if (p.getS3Key() != null && !p.getS3Key().isBlank()) {
+                        try {
+                            downloadUrl = s3Service.getDownloadPresignedUrl(p.getS3Key());
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    UserPhotoResponseDto photoDto = UserPhotoResponseDto.builder()
+                            .photoId(p.getPhotoId())
+                            .userId(p.getUserId())
+                            .name(p.getName())
+                            .downloadUrl(downloadUrl)
+                            .visibility(p.getVisibility() != null ? p.getVisibility().name() : null)
+                            .takenAt(p.getTakenAt() != null ? p.getTakenAt().toString() : null)
+                            .build();
+
+                    result.add(UserClusterResponseDto.builder()
+                            .clusterId("photo_" + p.getPhotoId())
+                            .userId(p.getUserId())
+                            .location(p.getLocation())
+                            .thumbnailPhotoId(p.getPhotoId())
+                            .thumbnailUrl(downloadUrl)
+                            .photoCount(1)
+                            .visibility(p.getVisibility())
+                            .photos(java.util.Collections.singletonList(photoDto))
+                            .build());
+                }
+            }
+        }
+
+        return result;
     }
 
     @Override
