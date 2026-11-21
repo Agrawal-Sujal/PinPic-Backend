@@ -11,7 +11,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SyncBatchResponseDto {
-    private List<SyncResultDto> results;
+public class SyncPushRequestDto {
+    private String deviceId;
+    private List<ClusterSyncDto> clusters;
+    private List<PhotoSyncDto> photos;
 }
-

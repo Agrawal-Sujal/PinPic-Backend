@@ -20,5 +20,7 @@ public class ClusterSyncDto {
     private Integer publicPhotoCount;
     private Integer privatePhotoCount;
     private Integer friendPhotoCount;
+    private Boolean isDeleted;
+    private Long revision;
 }
 

@@ -21,5 +21,7 @@ public class PhotoSyncDto {
     private Location location;
     private Visibility visibility;
     private Long size;
+    private Boolean isDeleted;
+    private Long revision;
 }
 

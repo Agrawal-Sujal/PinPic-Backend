@@ -48,6 +48,16 @@ public class Cluster {
 
     private LocalDateTime updatedAt;
 
+    @Column
+    private LocalDateTime deletedAt;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Long revision = 0L;
+
+    @Column(length = 64)
+    private String lastModifiedDeviceId;
+
     public Visibility calculateVisibility() {
         if (publicPhotoCount != null && publicPhotoCount > 0) {
             return Visibility.PUBLIC;

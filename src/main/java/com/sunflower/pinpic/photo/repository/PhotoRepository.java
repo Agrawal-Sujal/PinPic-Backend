@@ -22,4 +22,10 @@ public interface PhotoRepository extends JpaRepository<Photo, String> {
         @Param("userId") String userId,
         @Param("visibilities") Collection<Visibility> visibilities
     );
+
+    List<Photo> findByUserIdAndRevisionGreaterThanOrderByRevisionAsc(
+        String userId,
+        Long revision,
+        org.springframework.data.domain.Pageable pageable
+    );
 }

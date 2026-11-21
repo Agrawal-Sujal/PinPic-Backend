@@ -6,8 +6,6 @@ import com.sunflower.pinpic.photo.dto.InitiateUploadResponseDto;
 import com.sunflower.pinpic.photo.entity.Photo;
 import com.sunflower.pinpic.photo.repository.PhotoRepository;
 import com.sunflower.pinpic.storage.S3Service;
-import com.sunflower.pinpic.sync.entity.CloudSyncOperation;
-import com.sunflower.pinpic.sync.repository.CloudSyncOperationRepository;
 import com.sunflower.pinpic.user.entity.User;
 import com.sunflower.pinpic.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +27,6 @@ public class PhotoService {
 
     @Autowired
     private S3Service s3Service;
-
-    @Autowired
-    private CloudSyncOperationRepository cloudSyncOperationRepository;
 
     public InitiateUploadResponseDto initiateUpload(InitiateUploadRequestDto request, String userId) {
         String uniqueId = UUID.randomUUID().toString();
@@ -116,19 +111,11 @@ public class PhotoService {
             throw new IllegalArgumentException("Unauthorized to delete this photo");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         photo.setIsDeleted(true);
-        photo.setEditedAt(LocalDateTime.now());
+        photo.setDeletedAt(now);
+        photo.setEditedAt(now);
         photoRepository.save(photo);
-
-        try {
-            cloudSyncOperationRepository.save(CloudSyncOperation.builder()
-                    .userId(user.getId())
-                    .entityType("PHOTOS")
-                    .operation("DELETE")
-                    .entityId(photoId)
-                    .createdAt(LocalDateTime.now())
-                    .build());
-        } catch (Exception ignored) {}
     }
 
     public void deletePhotos(List<String> photoIds, String userEmail) {
@@ -142,16 +129,8 @@ public class PhotoService {
         for (Photo photo : photos) {
             if (user.getId().equals(photo.getUserId())) {
                 photo.setIsDeleted(true);
+                photo.setDeletedAt(now);
                 photo.setEditedAt(now);
-                try {
-                    cloudSyncOperationRepository.save(CloudSyncOperation.builder()
-                            .userId(user.getId())
-                            .entityType("PHOTOS")
-                            .operation("DELETE")
-                            .entityId(photo.getPhotoId())
-                            .createdAt(now)
-                            .build());
-                } catch (Exception ignored) {}
             }
         }
         photoRepository.saveAll(photos);
