@@ -9,9 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SyncPullRequestDto {
-    private String deviceId;
-    private Long lastOperationId;
-    private Integer batchSize;
+public class SyncPushResponseDto {
+    private String status;
+    private String message;
 }
-

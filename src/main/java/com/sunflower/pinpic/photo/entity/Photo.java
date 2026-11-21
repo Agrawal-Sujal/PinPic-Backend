@@ -51,4 +51,14 @@ public class Photo {
     private Boolean isDeleted = false;
     
     private Long size;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Long revision = 0L;
+
+    @Column
+    private LocalDateTime deletedAt;
+
+    @Column(length = 64)
+    private String lastModifiedDeviceId;
 }

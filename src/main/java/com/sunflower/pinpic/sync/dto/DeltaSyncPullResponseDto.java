@@ -11,9 +11,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SyncPullResponseDto {
-    private List<SyncPullItemDto> operations;
-    private Long lastOperationId;
-    private boolean hasMore;
+public class DeltaSyncPullResponseDto {
+    private List<ClusterDeltaDto> clusters;
+    private List<PhotoDeltaDto> photos;
+    private Long nextCursor;
+    private Boolean hasMore;
+    private Boolean resetRequired;
 }
-

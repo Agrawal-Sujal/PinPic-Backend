@@ -1,9 +1,8 @@
 package com.sunflower.pinpic.sync.controller;
 
-import com.sunflower.pinpic.sync.dto.SyncBatchRequestDto;
-import com.sunflower.pinpic.sync.dto.SyncBatchResponseDto;
-import com.sunflower.pinpic.sync.dto.SyncPullRequestDto;
-import com.sunflower.pinpic.sync.dto.SyncPullResponseDto;
+import com.sunflower.pinpic.sync.dto.DeltaSyncPullResponseDto;
+import com.sunflower.pinpic.sync.dto.SyncPushRequestDto;
+import com.sunflower.pinpic.sync.dto.SyncPushResponseDto;
 import com.sunflower.pinpic.sync.service.SyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,41 +18,27 @@ public class SyncController {
 
     private final SyncService syncService;
 
-    @PostMapping("/batch")
-    public ResponseEntity<SyncBatchResponseDto> processBatch(
-            @RequestBody SyncBatchRequestDto request,
+    @PostMapping("/push")
+    public ResponseEntity<SyncPushResponseDto> pushMutations(
+            @RequestBody SyncPushRequestDto request,
             Principal principal
     ) {
         if (principal == null || principal.getName() == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(syncService.processBatch(request, principal.getName()));
+        return ResponseEntity.ok(syncService.pushMutations(request, principal.getName()));
     }
 
-    @GetMapping("/pull")
-    public ResponseEntity<SyncPullResponseDto> pullOperations(
-            @RequestParam(name = "lastOperationId", defaultValue = "0") Long lastOperationId,
-            @RequestParam(name = "batchSize", defaultValue = "50") int batchSize,
+    @GetMapping(value = {"/pull", "/deltas"})
+    public ResponseEntity<DeltaSyncPullResponseDto> pullDeltas(
+            @RequestParam(name = "cursor", defaultValue = "0") Long cursor,
+            @RequestParam(name = "limit", defaultValue = "200") int limit,
             @RequestParam(name = "deviceId", required = false) String deviceId,
             Principal principal
     ) {
         if (principal == null || principal.getName() == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(syncService.pullOperations(principal.getName(), deviceId, lastOperationId, batchSize));
-    }
-
-    @PostMapping("/pull")
-    public ResponseEntity<SyncPullResponseDto> pullOperationsPost(
-            @RequestBody(required = false) SyncPullRequestDto request,
-            Principal principal
-    ) {
-        if (principal == null || principal.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        String deviceId = request != null ? request.getDeviceId() : null;
-        Long lastOperationId = (request != null && request.getLastOperationId() != null) ? request.getLastOperationId() : 0L;
-        int batchSize = (request != null && request.getBatchSize() != null) ? request.getBatchSize() : 50;
-        return ResponseEntity.ok(syncService.pullOperations(principal.getName(), deviceId, lastOperationId, batchSize));
+        return ResponseEntity.ok(syncService.pullDeltas(principal.getName(), deviceId, cursor, limit));
     }
 }

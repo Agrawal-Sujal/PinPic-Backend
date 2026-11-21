@@ -19,4 +19,10 @@ public interface ClusterRepository extends JpaRepository<Cluster, String> {
             @Param("userId") String userId,
             @Param("visibilities") Collection<Visibility> visibilities
     );
+
+    List<Cluster> findByUserIdAndRevisionGreaterThanOrderByRevisionAsc(
+            String userId,
+            Long revision,
+            org.springframework.data.domain.Pageable pageable
+    );
 }
